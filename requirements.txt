@@ -1,3 +1,5 @@
 streamlit 
 scikit-learn 
 pandas
+
+pip install numpy pandas matplotlib scikit-learn tensorflow
