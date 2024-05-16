@@ -95,9 +95,29 @@ modelo = keras.Model(all_inputs, output)
 
 modelo.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy", metrics=["accuracy"])
 early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-modelo.fit(
+history = modelo.fit(
     x=treino_ds,
     epochs=200,
     validation_data=teste_ds,
     callbacks=[early_stopping]
 )
+
+import matplotlib.pyplot as plt
+
+plt.plot(history.history['loss'], label='Treino')
+plt.plot(history.history['val_loss'], label='Validação')
+plt.xlabel('Épocas')
+plt.ylabel('Perda')
+plt.legend()
+plt.show()
+
+plt.plot(history.history['accuracy'], label='Treino')
+plt.plot(history.history['val_accuracy'], label='Validação')
+plt.xlabel('Épocas')
+plt.ylabel('Acurácia')
+plt.legend()
+plt.show()
+
+# Avaliar o modelo no conjunto de teste
+loss, accuracy = modelo.evaluate(teste_ds)
+print(f'Acurácia no conjunto de teste: {accuracy:{0:.2f}%}')
