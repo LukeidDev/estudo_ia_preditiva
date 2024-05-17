@@ -3,6 +3,8 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+
 
 # Dados fornecidos
 metals = {
@@ -14,16 +16,16 @@ metals = {
         'January 2024', 'February 2024'
     ],
     'Copper': [
-        8.240, 8.340, 8.123, 8.654, 8.504, 8.543, 8.123, 8.456, 8.785, 8.343, 8.123, 8.253, 8.463, 7.123, 8.123, 8.954, 
-        8.430, 8.341, 8.864, 8.034, 8.690, 8.594, 8.470, 8.475, 8.3506, 8.2695, 7.9388, 8.173, 8.3932, 8.3427, 8.3094
+        8.240, 8.340, 8.123, 8.654, 8.504, 8.543, 8.350, 8.456, 8.785, 8.343, 8.345, 8.253, 8.463, 7.578, 8.478, 8.567, 
+        8.430, 8.341, 8.678, 8.489, 8.690, 8.594, 8.470, 8.475, 8.3506, 8.2695, 7.9388, 8.173, 8.3932, 8.3427, 8.3094
     ],
     'Aluminum': [
         2.134, 2.314, 2.235, 2.235, 2.797, 2.796, 2.567, 2.097, 2.567, 2.789, 2.456, 2.786, 2.456, 2.789, 2.567, 2.645, 
         2.373, 2.345, 2.945, 2.234, 2.356, 2.175, 2.934, 2.923, 2.1334, 2.1769, 2.1918, 2.2016, 2.1737, 2.1936, 2.1819
     ],
     'BCB_Dollar': [
-        5.349, 5.539, 5.235, 5.956, 5.845, 5.349, 5.023, 5.243, 5.124, 5.436, 5.253, 5.129, 5.964, 5.124, 5.346, 5.629, 
-        5.123, 5.946, 5.358, 5.230, 5.469, 5.234, 5.366, 5.345, 4.9034, 4.9364, 5.0642, 4.8977, 4.8998, 4.9138, 4.9638
+        5.349, 5.539, 5.235, 5.435, 5.755, 5.349, 5.023, 5.243, 5.124, 5.436, 5.253, 5.129, 5.765, 5.124, 5.346, 5.629, 
+        5.123, 5.657, 5.358, 5.230, 5.469, 5.234, 5.366, 5.345, 4.9034, 4.9364, 5.0642, 4.8977, 4.8998, 4.9138, 4.9638
     ]
 }
 
@@ -74,10 +76,9 @@ class CustomEarlyStopping(keras.callbacks.Callback):
             dentro_limiar = np.abs((y_test[:, i] - y_pred[:, i]) / y_test[:, i]) < limiar
             acuracia = np.mean(dentro_limiar)
             acuracias.append(acuracia)
-            print(f'Acurácia para {df.columns[i]}: {acuracia * 100:.2f}%')
-
         acuracia_media = np.mean(acuracias)
-        print(f'Acurácia média: {acuracia_media * 100:.2f}%')
+        
+        print(f'\nEpoch {epoch + 1}: acurácia média: {acuracia_media * 100:.2f}%')
 
         if acuracia_media >= self.accuracy_threshold:
             print(f'Parando o treinamento na epoch {epoch + 1} pois a acurácia média está acima de {self.accuracy_threshold * 100:.2f}%')
@@ -92,9 +93,26 @@ history = model.fit(X_train, y_train, epochs=300, validation_data=(X_test, y_tes
 loss = model.evaluate(X_test, y_test)
 print(f'Loss (MSE) no conjunto de teste: {loss}')
 
+# Calcular o MAE no conjunto de teste
+y_pred = model.predict(X_test)
+mae = np.mean(np.abs(y_test - y_pred))
+print(f'Mean Absolute Error (MAE) no conjunto de teste: {mae}')
+
+# Calcular a acurácia com base em um limiar de 10%
+limiar = 0.10
+acuracias = []
+for i in range(y_test.shape[1]):
+    dentro_limiar = np.abs((y_test[:, i] - y_pred[:, i]) / y_test[:, i]) < limiar
+    acuracia = np.mean(dentro_limiar)
+    acuracias.append(acuracia)
+    print(f'Acurácia para {df.columns[i]}: {acuracia * 100:.2f}%')
+
+acuracia_media = np.mean(acuracias)
+print(f'Acurácia média: {acuracia_media * 100:.2f}%')
+
 # Selecionar os últimos dados para fazer a previsão
 ultimo_periodo = df.iloc[-janela_tamanho:].values
-ultimo_periodo = np.expand_dims(ultimo_periodo, axis =0)
+ultimo_periodo = np.expand_dims(ultimo_periodo, axis=0)
 
 # Fazer a previsão para o próximo mês
 proxima_previsao = model.predict(ultimo_periodo)
@@ -104,4 +122,24 @@ colunas = ['Copper', 'Aluminum', 'BCB_Dollar']
 proxima_previsao_df = pd.DataFrame(proxima_previsao, columns=colunas, index=[df.index[-1] + pd.DateOffset(months=1)])
 
 print(proxima_previsao_df)
+
+# Plotagem dos resultados
+plt.figure(figsize=(14, 7))
+
+# Plot dos valores reais
+plt.plot(df.index, df['Copper'], label='Copper (Real)', color='blue')
+plt.plot(df.index, df['Aluminum'], label='Aluminum (Real)', color='green')
+plt.plot(df.index, df['BCB_Dollar'], label='BCB Dollar (Real)', color='red')
+
+# Plot dos valores previstos para o próximo mês
+plt.plot(proxima_previsao_df.index, proxima_previsao_df['Copper'], marker='o', markersize=8, label='Copper (Previsto)', color='blue')
+plt.plot(proxima_previsao_df.index, proxima_previsao_df['Aluminum'], marker='o', markersize=8, label='Aluminum (Previsto)', color='green')
+plt.plot(proxima_previsao_df.index, proxima_previsao_df['BCB_Dollar'], marker='o', markersize=8, label='BCB Dollar (Previsto)', color='red')
+
+plt.title('Previsão dos Metais e Dólar BCB')
+plt.xlabel('Data')
+plt.ylabel('Valor')
+plt.legend()
+plt.grid(True)
+plt.show()
 
